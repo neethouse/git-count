@@ -4,11 +4,18 @@
 
 ## Installation
 
-```
+```sh
 git clone https://github.com/neethouse/git-count.git
 cd git-count
 cp git-count <path/to/bin>
 # "<path/to/bin>" is directory that included "$PATH".
+```
+
+### Use homebrew
+
+```sh
+brew tap neethouse/neet
+brew install git-count
 ```
 
 ## How to use
