@@ -1,0 +1,103 @@
+#!/bin/bash
+
+###
+#
+# This is a git-subcommand that counts the number of lines of code that each author wrote.
+#
+# Dear Hacker.
+# This command is very time consuming. please help!
+#
+###
+
+function show-usage() {
+
+######
+# Editing and README.md When you finish editing the usage message.
+#####
+
+cat <<EOD
+usage: git count <path> [<regex>]
+
+CAUTION !!
+
+Is very time consuming, if the repository is large.
+
+OPTIONS
+
+    <path>
+        Attempt to counts the file hierarchy rooted in each file.
+
+        e.g.
+            Following the "src" directory.   -> git count "path/to/src"
+            Following the "test" directory.  -> git count "path/to/test"
+            Following the current directory. -> git count "."
+
+    <regex>
+        If you specify this regex pattern.
+        You can count lines that files that match the regular expression.
+        This regex pattern is the egrep regex pattern.
+
+        e.g.
+            Following the "src" directory.   -> git count "path/to/src"
+            Only Java source code.  -> git count "." "\.java$"
+            Only Scala source code. -> git count "." "\.scala$"
+            Only Objective-C code.  -> git count "." "\.[hm]$"
+
+For more information -> "https://github.com/neethouse/git-count"
+EOD
+}
+
+if [ $# -eq 0 ]; then
+    show-usage
+    exit 1
+fi
+
+# tmp files
+TMP_DIR=`mktemp -d git-count.XXXXXX`
+TMP_GIT_BLAME_FILE="$TMP_DIR/blame.tmpfile"
+TMP_USERLIST_FILE="$TMP_DIR/userlist.tmpfile"
+TMP_COUNTS_FILE="$TMP_DIR/counts.tmpfile"
+
+trap 'rm -rf "$TMP_DIR" && exit 1' 1 2 3 15
+
+cd "`pwd`"
+
+if ! git status > /dev/null; then
+    exit 1
+fi
+
+# Make user list
+git log --pretty=format:"%an" | sort | uniq > "$TMP_USERLIST_FILE"
+
+# Make the (length of the longest user name + 1)
+NAME_SPACE_LENGTH=`awk '{ if (length($0) > max) max = length($0) }
+END { print (max + 1) }' "$TMP_USERLIST_FILE"`
+
+REGEX=".*"
+
+if [ $# -eq 2 ]; then
+    REGEX=$2
+fi
+
+# Show the number of files to be counted.
+echo "`git grep -I --name-only -G ".*" -- "$1" | egrep "$REGEX" | wc -l | sed -e 's/[^0-9]//g'` files found."
+echo
+
+
+# blame (^^ゞ
+git grep -I --name-only -G ".*" -- "$1" | egrep "$REGEX" | xargs -I {} git --no-pager blame --line-porcelain -f -w "{}"| grep "^author " > "$TMP_GIT_BLAME_FILE"
+
+# count lines each author.
+while read USER_NAME; do
+
+    NUM_OF_LINES=`cat "$TMP_GIT_BLAME_FILE" | grep "${USER_NAME}" | wc -l | sed -e 's/[^0-9]//g'`
+    printf "%-${NAME_SPACE_LENGTH}s\t%-10s\n" "$USER_NAME" "$NUM_OF_LINES" >> $TMP_COUNTS_FILE
+
+done < $TMP_USERLIST_FILE
+
+# make ranking
+cat $TMP_COUNTS_FILE | sort -k2 -n -r
+
+# clean up
+rm -rf $TMP_DIR
+
