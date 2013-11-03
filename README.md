@@ -77,6 +77,28 @@ OPTIONS
             Only Scala source code. -> git count "." "\.scala$"
             Only Objective-C code.  -> git count "." "\.[hm]$"
 
+        Or
+
+        You can use default regex from git-config.
+
+        git config --local git-count.regex "your regex pattern"
+        git config --global git-count.regex "your regex pattern"
+
+        Commandline argument takes precedence.
+
 For more information -> "https://github.com/neethouse/git-count"
 ```
 
+## Tips
+
+### Use default regex pattern
+
+You can use default regex from git-config.
+
+`git config --local git-count.regex "your regex pattern"`
+
+or
+
+`git config --global git-count.regex "your regex pattern"`
+
+Commandline argument takes precedence.

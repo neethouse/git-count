@@ -15,7 +15,7 @@ function show-usage() {
 # Editing and README.md When you finish editing the usage message.
 #####
 
-cat <<EOD
+cat << EOD
 usage: git count <path> [<regex>]
 
 CAUTION !!
@@ -42,6 +42,15 @@ OPTIONS
             Only Java source code.  -> git count "." "\.java$"
             Only Scala source code. -> git count "." "\.scala$"
             Only Objective-C code.  -> git count "." "\.[hm]$"
+
+        Or
+
+        You can use default regex from git-config.
+
+        git config --local git-count.regex "your regex pattern"
+        git config --global git-count.regex "your regex pattern"
+
+        Commandline argument takes precedence.
 
 For more information -> "https://github.com/neethouse/git-count"
 EOD
@@ -74,6 +83,10 @@ NAME_SPACE_LENGTH=`awk '{ if (length($0) > max) max = length($0) }
 END { print (max + 1) }' "$TMP_USERLIST_FILE"`
 
 REGEX=".*"
+
+if git config --get git-count.regex > /dev/null; then
+    REGEX=`git config --get git-count.regex`
+fi
 
 if [ $# -eq 2 ]; then
     REGEX=$2
