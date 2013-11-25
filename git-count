@@ -100,16 +100,22 @@ echo
 # blame (^^ゞ
 git grep -I --name-only -G ".*" -- "$1" | egrep "$REGEX" | xargs -I {} git --no-pager blame --line-porcelain -f -w "{}"| grep "^author " > "$TMP_GIT_BLAME_FILE"
 
+totalNumOfLines=0
+
 # count lines each author.
 while read USER_NAME; do
 
     NUM_OF_LINES=`cat "$TMP_GIT_BLAME_FILE" | grep "${USER_NAME}" | wc -l | sed -e 's/[^0-9]//g'`
     printf "%-${NAME_SPACE_LENGTH}s\t%-10s\n" "$USER_NAME" "$NUM_OF_LINES" >> $TMP_COUNTS_FILE
+    totalNumOfLines=$(($totalNumOfLines + NUM_OF_LINES))
 
 done < $TMP_USERLIST_FILE
 
 # make ranking
 cat $TMP_COUNTS_FILE | sort -k2 -n -r
+
+echo
+printf "Total\t%d\n" $totalNumOfLines
 
 # clean up
 rm -rf $TMP_DIR
