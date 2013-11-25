@@ -36,12 +36,14 @@ git count . "\.[hm]$"
 ### 3. You can get the rankings.
 
 ```
-533 files found.
+899 files found.
 
-mironal       20564
-mtmta         11794
-ryohey        3072
-YanaC         427
+mironal       34019
+mtmta         28792
+ryohey        3963
+YanaC         2116
+
+Total 68890
 ```
 
 ### 4. 晒しあげ (☝◞‸◟)☝
