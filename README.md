@@ -52,7 +52,7 @@ Total 68890
 ## Help
 
 ```
-usage: git count <path> [<regex>]
+usage: git count [--ltsv] [--csv] <path> [<regex>]
 
 CAUTION !!
 
@@ -88,7 +88,26 @@ OPTIONS
 
         Commandline argument takes precedence.
 
+    --ltsv
+        Output LTSV format.
+        The standard formatis usedif you do not specify.
+
+        e.g.
+            @username0:count0<TAB>@username1:count1<TAB>@username2:count2<TAB>total:total-count<TAB>files:file-count
+
+    --csv
+        Output CSV format.
+        The standard formatis usedif you do not specify.
+
+        e.g.
+            @username0,10
+            @usernamet,22
+            @username2,30
+            total,62
+            files,3
+
 For more information -> "https://github.com/neethouse/git-count"
+version : ${VERSION}
 ```
 
 ## Tips
@@ -104,3 +123,30 @@ or
 `git config --global git-count.regex "your regex pattern"`
 
 Commandline argument takes precedence.
+
+### LTSV format
+
+
+```sh
+git count --ltsv .
+```
+
+```
+mironal:37002   mtmta:36458     ryohey:3627     YanaC:2034      total:79121     files:986
+```
+
+### CSV format
+
+```sh
+git count --csv .
+```
+
+```
+mironal,37002
+mtmta,36458
+ryohey,3627
+YanaC,2034
+total,79121
+files,986
+```
+

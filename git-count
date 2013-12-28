@@ -9,6 +9,8 @@
 #
 ###
 
+VERSION=1.3.0
+
 function show-usage() {
 
 ######
@@ -16,7 +18,7 @@ function show-usage() {
 #####
 
 cat << EOD
-usage: git count <path> [<regex>]
+usage: git count [--ltsv] [--csv] <path> [<regex>]
 
 CAUTION !!
 
@@ -52,24 +54,69 @@ OPTIONS
 
         Commandline argument takes precedence.
 
+    --ltsv
+        Output LTSV format.
+        The standard formatis usedif you do not specify.
+
+        e.g.
+            @username0:count0<TAB>@username1:count1<TAB>@username2:count2<TAB>total:total-count<TAB>files:file-count
+
+    --csv
+        Output CSV format.
+        The standard formatis usedif you do not specify.
+
+        e.g.
+            @username0,10
+            @usernamet,22
+            @username2,30
+            total,62
+            files,3
+
 For more information -> "https://github.com/neethouse/git-count"
+version : ${VERSION}
 EOD
 }
 
-if [ $# -eq 0 ]; then
-    show-usage
-    exit 1
-fi
+CURRENT_DIR=`pwd`
+OPTS=()
+FORMAT=""
+
+for OPT in "$@"; do
+    case "$OPT" in
+        "--version" )
+            echo $VERSION
+            exit
+            ;;
+
+        "-h" )
+            show-usage
+            exit
+            ;;
+
+        "--ltsv" | "--csv" )
+
+            FORMAT=$OPT
+            ;;
+
+        * )
+            OPTS+=("$OPT")
+            ;;
+    esac
+done
 
 # tmp files
+cd /tmp
 TMP_DIR=`mktemp -d git-count.XXXXXX`
+cd $TMP_DIR
+TMP_DIR=`pwd`
 TMP_GIT_BLAME_FILE="$TMP_DIR/blame.tmpfile"
 TMP_USERLIST_FILE="$TMP_DIR/userlist.tmpfile"
 TMP_COUNTS_FILE="$TMP_DIR/counts.tmpfile"
+TMP_RESULT_CSV="$TMP_DIR/result.csv"
 
 trap 'rm -rf "$TMP_DIR" && exit 1' 1 2 3 15
 
-cd "`pwd`"
+cd $CURRENT_DIR
 
 if ! git status > /dev/null; then
     exit 1
@@ -82,40 +129,67 @@ git log --pretty=format:"%an" | sort | uniq > "$TMP_USERLIST_FILE"
 NAME_SPACE_LENGTH=`awk '{ if (length($0) > max) max = length($0) }
 END { print (max + 1) }' "$TMP_USERLIST_FILE"`
 
+DIR="."
+
+if [ ${#OPTS[@]} -gt 0 ]; then
+    DIR=${OPTS[0]}
+else
+    show-usage
+    exit 1
+fi
+
 REGEX=".*"
 
 if git config --get git-count.regex > /dev/null; then
     REGEX=`git config --get git-count.regex`
 fi
 
-if [ $# -eq 2 ]; then
-    REGEX=$2
+if [ ${#OPTS[@]} -gt 1 ]; then
+    REGEX=${OPTS[1]}
 fi
 
 # Show the number of files to be counted.
-echo "`git grep -I --name-only -G ".*" -- "$1" | egrep "$REGEX" | wc -l | sed -e 's/[^0-9]//g'` files found."
-echo
-
+NUM_OF_FILES="`git grep -I --name-only -G ".*" -- "$DIR" | egrep "$REGEX" | wc -l | sed -e 's/[^0-9]//g'`"
 
 # blame (^^ゞ
-git grep -I --name-only -G ".*" -- "$1" | egrep "$REGEX" | xargs -I {} git --no-pager blame --line-porcelain -f -w "{}"| grep "^author " > "$TMP_GIT_BLAME_FILE"
+git grep -I --name-only -G ".*" -- "$DIR" | egrep "$REGEX" | xargs -I {} git --no-pager blame --line-porcelain -f -w "{}"| grep "^author " > "$TMP_GIT_BLAME_FILE"
 
-totalNumOfLines=0
-
+TOTAL_NUM_OF_LINES=0
 # count lines each author.
 while read USER_NAME; do
 
-    NUM_OF_LINES=`cat "$TMP_GIT_BLAME_FILE" | grep "${USER_NAME}" | wc -l | sed -e 's/[^0-9]//g'`
-    printf "%-${NAME_SPACE_LENGTH}s\t%-10s\n" "$USER_NAME" "$NUM_OF_LINES" >> $TMP_COUNTS_FILE
-    totalNumOfLines=$(($totalNumOfLines + NUM_OF_LINES))
+    NUM_OF_LINE=`cat "$TMP_GIT_BLAME_FILE" | grep "${USER_NAME}" | wc -l | sed -e 's/[^0-9]//g'`
+    TOTAL_NUM_OF_LINES=$(($TOTAL_NUM_OF_LINES + $NUM_OF_LINE))
+    echo "$USER_NAME","$NUM_OF_LINE" >> $TMP_COUNTS_FILE
 
 done < $TMP_USERLIST_FILE
 
-# make ranking
-cat $TMP_COUNTS_FILE | sort -k2 -n -r
+cat $TMP_COUNTS_FILE | sort -k2 -n -r -t , > $TMP_RESULT_CSV
+echo total,$TOTAL_NUM_OF_LINES >> $TMP_RESULT_CSV
+echo files,$NUM_OF_FILES >> $TMP_RESULT_CSV
 
-echo
-printf "Total\t%d\n" $totalNumOfLines
+case $FORMAT in
+    "--ltsv" )
+        # cat | make LTSV | remove last <TAB>
+        cat $TMP_RESULT_CSV | awk '{sub(",", ":");printf "%s\t", $1}' | sed -e 's/\t$//'
+        ;;
+
+    "--csv" )
+        cat $TMP_RESULT_CSV
+        ;;
+
+    * )
+        # human readable format
+        TMP_SORTED_CSV="$TMP_DIR/sorted.csv"
+        cat $TMP_COUNTS_FILE | sort -k2 -n -r -t , > $TMP_SORTED_CSV
+        echo $NUM_OF_FILES files found.
+        echo
+        while read RSLT; do
+            printf "%-${NAME_SPACE_LENGTH}s\t%-10s\n" `echo $RSLT | cut -d , -f 1` `echo $RSLT | cut -d , -f 2`
+        done < $TMP_SORTED_CSV
+        printf "\nTotal\t%d\n" $TOTAL_NUM_OF_LINES
+        ;;
+esac
 
 # clean up
 rm -rf $TMP_DIR
