@@ -52,7 +52,7 @@ Total 68890
 ## Help
 
 ```
-usage: git count [--ltsv] [--csv] <path> [<regex>]
+usage: git count [--ltsv] [--csv] [--parallel] <path> [<regex>]
 
 CAUTION !!
 
@@ -105,6 +105,9 @@ OPTIONS
             @username2,30
             total,62
             files,3
+
+    --parallel
+        Run in parallel xargs(-P 4). default is no parallel.
 
 For more information -> "https://github.com/neethouse/git-count"
 version : ${VERSION}
