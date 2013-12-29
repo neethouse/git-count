@@ -7,6 +7,8 @@
 # Dear Hacker.
 # This command is very time consuming. please help!
 #
+# And please test me!!
+#
 ###
 
 VERSION=1.3.0
@@ -77,6 +79,13 @@ version : ${VERSION}
 EOD
 }
 
+function blame_file() {
+
+    SAVE_PATH="$1"/`basename "$2"`.author.git-count
+    git --no-pager blame -f -w --line-porcelain "$2" | egrep "^author " > "$SAVE_PATH"
+}
+export -f blame_file
+
 CURRENT_DIR=`pwd`
 OPTS=()
 FORMAT=""
@@ -132,7 +141,7 @@ END { print (max + 1) }' "$TMP_USERLIST_FILE"`
 DIR="."
 
 if [ ${#OPTS[@]} -gt 0 ]; then
-    DIR=${OPTS[0]}
+    DIR="${OPTS[0]}"
 else
     show-usage
     exit 1
@@ -145,20 +154,22 @@ if git config --get git-count.regex > /dev/null; then
 fi
 
 if [ ${#OPTS[@]} -gt 1 ]; then
-    REGEX=${OPTS[1]}
+    REGEX="${OPTS[1]}"
 fi
 
 # Show the number of files to be counted.
 NUM_OF_FILES="`git grep -I --name-only -G ".*" -- "$DIR" | egrep "$REGEX" | wc -l | sed -e 's/[^0-9]//g'`"
 
 # blame (^^ゞ
-git grep -I --name-only -G ".*" -- "$DIR" | egrep "$REGEX" | xargs -I {} git --no-pager blame --line-porcelain -f -w "{}"| grep "^author " > "$TMP_GIT_BLAME_FILE"
+git grep -I --name-only -G ".*" -- "$DIR" | egrep "$REGEX" | xargs -P 4 -I {} bash -c "blame_file '$TMP_DIR' '{}'"
+
+cat $TMP_DIR/*.author.git-count > $TMP_GIT_BLAME_FILE
 
 TOTAL_NUM_OF_LINES=0
 # count lines each author.
 while read USER_NAME; do
 
-    NUM_OF_LINE=`cat "$TMP_GIT_BLAME_FILE" | grep "${USER_NAME}" | wc -l | sed -e 's/[^0-9]//g'`
+    NUM_OF_LINE=`cat "$TMP_GIT_BLAME_FILE" | grep "${USER_NAME}$" | wc -l | sed -e 's/[^0-9]//g'`
     TOTAL_NUM_OF_LINES=$(($TOTAL_NUM_OF_LINES + $NUM_OF_LINE))
     echo "$USER_NAME","$NUM_OF_LINE" >> $TMP_COUNTS_FILE
 
